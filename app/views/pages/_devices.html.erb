@@ -1,0 +1,27 @@
+<table class='table text-center'>
+  <thead class='thead-light'>
+    <tr>
+      <td> <strong>Name</strong> </td>
+      <td> <strong>Type</strong> </td>
+      <td> <strong>Ports</strong> </td>
+      <td> <strong>Internet Bandwidth</strong> </td>
+      <td> <strong>Price</strong>  </td>
+      <td> <strong>SFP</strong> </td>
+      <td> <strong>SFP+</strong> </td>
+    </tr>
+  </thead>
+  <% devices.each do |device| %>
+    <tr class='text-dark'>
+      <td> <%= device[:name] %> </td>
+      <td> <%= device[:d_type] %> </td>
+      <td> <%= device[:ports] %> </td>
+      <td> <%= device[:bandwidth] %> </td>
+      <td> <%= device[:price] %>  </td>
+      <td> <%= device[:sfp] %> </td>
+      <td> <%= device[:sfp_plus] %> </td>
+    </tr>
+  <% end %>
+</table>
+<div class='pt-2 px-5'>
+  <p class='text-end fs-1'>TOTAL COST: <%=price%></p>
+</div>

@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  type: 1
+  users: 1
+  speed: 1
+  price: 1.5
+  sfp: 1
+  sfp+: 1
+
+two:
+  name: MyString
+  type: 1
+  users: 1
+  speed: 1
+  price: 1.5
+  sfp: 1
+  sfp+: 1

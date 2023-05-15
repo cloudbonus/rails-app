@@ -1,0 +1,28 @@
+<div class='container'>
+  <div class='row mt-5'>
+    <div class='col'>
+      <div class='card mt-5'>
+        <div class='card-header'>
+          <h2 class='display-6 text-center'>Fetched Data From Database</h2>
+        </div>
+        <%= turbo_frame_tag 'search-form', class: 'pt-2 pb-5 px-5' do %>
+          <%= form_with url: search_path, method: :get, data: { turbo_frame: 'results' }, class: 'row' do |f| %>
+            <div class='col d-flex justify-content-center'>
+              <%= f.select(:bandwidth, options_for_select([['10Mb/s', 10], ['100Mb/s', 100], ['1Gb/s', 1_000], ['10Gb/s', 10_000]]),{}, {class: 'form-select'}) %>
+            </div>
+            <div class='col d-flex justify-content-center'>
+              <%= f.number_field(:users, in: 1...100, required: true, class: 'form-control', type: 'number', placeholder: 'Users') %>
+            </div>
+            <div class='col d-flex justify-content-center'>
+              <%= f.number_field(:price, min: 0, step: 'any', required: true, class: 'form-control', type: 'number', placeholder: 'Price') %>
+            </div>
+            <div class='col d-flex justify-content-center'>
+              <%= f.submit('Search', class: 'btn btn-primary btn-block') %>
+            </div>
+          <% end %>
+        <% end %>
+        <%= turbo_frame_tag 'results'%>
+      </div>
+    </div>
+  </div>
+</div>
