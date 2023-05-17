@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PagesController < ApplicationController
   def index
     @net_devices = NetworkDevice.none
@@ -6,67 +8,80 @@ class PagesController < ApplicationController
   def search
     @budget = params[:price].to_f
     @users = params[:users].to_i
-    bandwidth = params[:bandwidth].to_i
+    @bandwidth = params[:bandwidth].to_i
 
-    # @type [Array]
-    @net_devices = find_devices(bandwidth, @budget)
+    @net_devices = search_devices_in_db
+    devices = split_devices_by_type
 
-    routers = @net_devices.select { |device| device if device[:d_type] == 'router' }
-    switches = @net_devices.select { |device| device if device[:d_type] == 'switch' }
-    cables = @net_devices.select { |device| device if device[:d_type] == 'cable' }
-
-    if routers.empty? || switches.empty?
-      message = 'Configuration is not found'
-      render turbo_stream: turbo_stream.update('results', partial: 'absent', locals: { message: })
-      return
-    end
-
-    routers, routers_price = get_devices(routers)
-    switches, switches_price = get_devices(switches)
-    cables, cables_price = get_devices(cables)
-
-    render_page(routers + switches + cables, routers_price + switches_price + cables_price)
-  end
-
-  def find_devices(bandwidth, budget)
-    NetworkDevice.where('bandwidth >= ? AND price <= ?', bandwidth, budget).order(ports: :desc)
-  end
-
-  # @param [Array] devices
-  def get_devices(devices, users_tmp = @users)
-    total_price = 0
-    result_devices = []
-    while users_tmp.positive? && total_price <= @budget
-      max_n, max_users = get_with_max_users(devices, users_tmp)
-      result_devices.append(devices[max_n])
-      users_tmp -= max_users
-      total_price += devices[max_n][:price]
-    end
-    [result_devices, total_price]
-  end
-
-  def get_with_max_users(devices, users = 0)
-    max_users = Integer
-    max_n = Integer
-    return [-1, users] if users < devices.map { |device| device[:ports] }.min
-
-    devices.each_with_index do |i, j|
-      next unless i[:ports] <= users
-
-      max_users = i[:ports]
-      max_n = j
-      break
-    end
-    [max_n, max_users]
-  end
-
-  def render_page(devices, price)
-    if price > @budget
-      message = "Not enough money. An additional $#{(price - @budget).round(2)} is required."
-      render turbo_stream: turbo_stream.update('results', partial: 'absent', locals: { message: })
+    if devices.any?(&:empty?)
+      render_page(true)
     else
-      price = price.round(2)
-      render turbo_stream: turbo_stream.update('results', partial: 'devices', locals: { devices:, price: })
+      @searched_devices, @price = get_devices_and_price(devices)
+      render_page(false)
+    end
+  end
+
+  private
+
+  def search_devices_in_db
+    NetworkDevice.where('bandwidth >= ?', @bandwidth)
+                 .where('price <= ?', @budget)
+                 .order(ports: :desc)
+  end
+
+  def split_devices_by_type
+    devices = Array.new(3) { [] }
+    @net_devices.each do |device|
+      case device[:d_type]
+      when 'router'
+        devices[0] << device
+      when 'switch'
+        devices[1] << device
+      else
+        devices[2] << device
+      end
+    end
+    devices
+  end
+
+  def get_devices_and_price(devices)
+    result_devices_and_total_price = devices.map do |devices_set|
+      result_devices = []
+      users_tmp = @users
+      total_price = 0
+
+      while users_tmp.positive? && total_price <= @budget
+        max_n, max_users = get_with_max_users(devices_set, users_tmp)
+        result_devices << devices_set[max_n]
+        users_tmp -= max_users
+        total_price += devices_set[max_n][:price]
+      end
+
+      [result_devices, total_price]
+    end
+
+    result_devices_and_total_price.transpose.map { |arr| arr.reduce(:+) }
+  end
+
+  def get_with_max_users(devices, users)
+    max_devices = devices.select { |d| d[:ports] <= users }
+    return [-1, users] if max_devices.empty?
+
+    max_device = max_devices.max_by { |d| d[:ports] }
+    [devices.index(max_device), max_device[:ports]]
+  end
+
+  def render_page(not_found)
+    partial = not_found ? 'not_found' : 'devices'
+    locals = not_found ? {} : { devices: @searched_devices, message: generate_message }
+    render turbo_stream: turbo_stream.update('results', partial:, locals:)
+  end
+
+  def generate_message
+    if @price > @budget
+      "Not enough money. An additional $#{(@price - @budget).round(2)} is required."
+    else
+      "TOTAL COST: #{@price.round(2)}"
     end
   end
 end
